@@ -4,6 +4,7 @@ import pygame as pg
 
 from colors import Colors
 from graph import Graph, Vertex, Edge, DRAG_BUSY
+import ui
 
 pg.init()
 size = width, height = 900, 900
@@ -17,15 +18,16 @@ font.underline = Colors.WhiteSmoke
 # v2 = Vertex(screen, mouse=pg.mouse, position=(100, 100), radius=10, width=1)
 # e = Edge(screen)
 
-g = Graph()
+g = Graph(screen, pg.mouse)
+# btn = ui.Button(screen=screen, mouse=pg.mouse, position=(10, 100), text="Button", onclick=lambda: print(1))
 
 while 1:
     screen.fill(Colors.Black)
     clock.tick(60)
     events = pg.event.get()
+    g.iteration(events)
 
-
-
+    # btn.iteration(events)
     # v.iteration(events)
     # v1.iteration(events)
     # v2.iteration(events)
