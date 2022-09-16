@@ -128,10 +128,13 @@ class Graph:
         self.vertexes = []
         self.stat_text_shape = drawing.Text(self.screen, "", (10, 10), Colors.WhiteSmoke)
         self.stat_text = ""
+        self.edges = {}
 
     def draw(self, events):
         for v in self.vertexes:
             v.iteration(events)
+        self.draw_edges()
+        self.display_stats()
 
     def is_any_vertex_covered(self):
         return len(self.vertexes) > 0 and any([i.covered for i in self.vertexes])
@@ -155,13 +158,51 @@ class Graph:
                     self.vertexes[c].selected = selected
 
     def get_selected(self):
-        return [i.id_ for i in self.vertexes]
+        return [i.id_ for i in self.vertexes if i.selected]
 
     def set_adjacency(self, ids):
         for c, v in enumerate(self.vertexes):
             for i in ids:
-                if v.id_ in ids and v.id_ != i:
+                if v.id_ in ids and v.id_ != i and not (i in v.con_to):
                     self.vertexes[c].con_to.append(i)
+
+    def display_stats(self):
+        mar_top = 100
+        for c, v in enumerate(self.vertexes):
+            drawing.Text(screen=self.screen, text=f"{v.id_}: {v.con_to}", position=(10, c * 15 + mar_top), color=Colors.WhiteSmoke if not v.selected else Colors.Plum).draw()
+
+    def get_vertex_pos_by_id(self, id_):
+        res = [i.position for i in self.vertexes if i.id_ == id_]
+        return None if len(res) == 0 else res[0]
+
+    def draw_edges(self):
+        for v in self.vertexes:
+            for i in v.con_to:
+                if not ((i, v.id_) in self.edges or (v.id_, i) in self.edges):
+                    self.edges.update({(i, v.id_): Edge(screen=self.screen, position=(v.position, self.get_vertex_pos_by_id(i)), weight=0, width=1, color=Colors.Green)})
+                else:
+                    if (i, v.id_) in self.edges:
+                        self.edges[(i, v.id_)].position = (v.position, self.get_vertex_pos_by_id(i))
+                        self.edges[(i, v.id_)].draw()
+                    elif (v.id_, i) in self.edges:
+                        self.edges[(v.id_, i)].position = (v.position, self.get_vertex_pos_by_id(i))
+                        self.edges[(v.id_, i)].draw()
+
+        for i in self.edges:
+            self.edges[i].draw()
+
+    def delete_vertex(self, id_):
+        for c, v in enumerate(self.vertexes):
+            if v.id_ == id_:
+                self.vertexes.pop()
+            if id_ in v.con_to:
+                self.vertexes[c].con_to = [i for i in self.vertexes[c].con_to if i != id_]
+        delkeys = []
+        for k in self.edges:
+            if id_ in k:
+                delkeys.append(k)
+        for k in delkeys:
+            self.edges.pop(k)
 
     def iteration(self, events):
         global COVER_BUSY, DRAG_BUSY
@@ -172,23 +213,25 @@ class Graph:
         self.stat_text = f"{COVER_BUSY.busy=}   {COVER_BUSY.on=}    {DRAG_BUSY=}"
         self.stat_text_shape.text = self.stat_text
         self.stat_text_shape.draw()
+        self.draw(events)
         for i in events:
             if i.type == pg.MOUSEBUTTONDOWN:
                 if i.button == 1:
                     if not COVER_BUSY and not DRAG_BUSY:
                         self.vertexes.append(Vertex(id_=generate_vertex_id(), screen=self.screen, mouse=self.mouse, con_to=[], position=self.mouse.get_pos()))
+                if i.button == 2:
+                    if COVER_BUSY:
+                        self.delete_vertex(COVER_BUSY.on)
                 if i.button == 3:
                     if COVER_BUSY.on is not None:
                         for v in self.vertexes:
                             if v.id_ == COVER_BUSY.on:
                                 self.set_vertex_selected(v.id_)
             if i.type == pg.KEYDOWN:
-                if i.key == pg.K_KP_ENTER:
+                if i.key == pg.K_e:
                     selected = self.get_selected()
                     if len(selected) == 2:
                         self.set_adjacency(selected)
-
-        self.draw(events)
 
 
 """
